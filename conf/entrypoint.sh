@@ -47,14 +47,13 @@ cat > /etc/ega/mq.conf <<EOF
 # of the form amqp(s)://user:password@host:port/vhost
 connection = ${MQ_CONNECTION}
 
-# or per values
-#enable_ssl = ${MQ_SSL:-no}
-#host = ${MQ_HOST}
-#port = ${MQ_PORT:-5672}
-#vhost = ${MQ_VHOST}
-#username = ${MQ_USER}
-#password = ${MQ_PASSWORD}
+verify_peer = ${MQ_VERIFY_PEER:-no}
+verify_hostname = ${MQ_VERIFY_HOSTNAME:-no}
+# cacert = /etc/ega/ca.cert
 
+# For client verification
+# certfile = /etc/ega/ssl.cert
+# keyfile = /etc/ega/ssl.key
 
 connection_attempts = 10
 retry_delay = 10
@@ -66,6 +65,11 @@ heartbeat = 0
 exchange = ${MQ_EXCHANGE:-cega}
 routing_key = ${MQ_ROUTING_KEY:-files.inbox}
 EOF
+
+if [ "${MQ_VERIFY_PEER}" == 'yes' ]; then
+    # or Yes, Y, 1, True, true...
+    echo "cacert = ${MQ_CACERT:-/etc/ega/ca.cert}" >> /etc/ega/mq.conf
+fi
 
 # Changing permissions
 echo "Changing permissions for /ega/inbox"
