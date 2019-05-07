@@ -103,6 +103,8 @@ readconfig(FILE* fp, const char* cfgfile, char* buffer, size_t buflen)
   mq_options->verify_hostname = MQ_VERIFY_HOSTNAME;
   mq_options->dsn = NULL;
   mq_options->cacert = NULL;
+  mq_options->certfile = NULL;
+  mq_options->keyfile = NULL;
   mq_options->host = NULL;
   mq_options->vhost = NULL;
   mq_options->username = NULL;
@@ -140,6 +142,8 @@ readconfig(FILE* fp, const char* cfgfile, char* buffer, size_t buflen)
     INJECT_OPTION(key, "routing_key"   , val, &(mq_options->routing_key) );
     INJECT_OPTION(key, "connection"    , val, &(mq_options->dsn)         );
     INJECT_OPTION(key, "cacert"        , val, &(mq_options->cacert)      );
+    INJECT_OPTION(key, "certfile"      , val, &(mq_options->certfile)    );
+    INJECT_OPTION(key, "keyfile"       , val, &(mq_options->keyfile)     );
 
     /* strtol ok even when val contains a comment #... */
     if(!strcmp(key, "heartbeat")) { mq_options->heartbeat   = strtol(val, NULL, 10); }

@@ -49,11 +49,6 @@ connection = ${MQ_CONNECTION}
 
 verify_peer = ${MQ_VERIFY_PEER:-no}
 verify_hostname = ${MQ_VERIFY_HOSTNAME:-no}
-# cacert = /etc/ega/ca.cert
-
-# For client verification
-# certfile = /etc/ega/ssl.cert
-# keyfile = /etc/ega/ssl.key
 
 connection_attempts = 10
 retry_delay = 10
@@ -66,10 +61,27 @@ exchange = ${MQ_EXCHANGE:-cega}
 routing_key = ${MQ_ROUTING_KEY:-files.inbox}
 EOF
 
-if [ "${MQ_VERIFY_PEER}" == 'yes' ]; then
+# For server verification
+if [ "${MQ_VERIFY_PEER}" == 'yes' ] && [ -f "${MQ_CACERT}" ]; then
     # or Yes, Y, 1, True, true...
-    echo "cacert = ${MQ_CACERT:-/etc/ega/ca.cert}" >> /etc/ega/mq.conf
+    echo "cacert = ${MQ_CACERT}" >> /etc/ega/mq.conf
 fi
+
+# For client verification
+if [ -f "${MQ_KEYFILE}" ]; then
+    # Keyfile must be non group nor world writable
+    chmod 600 ${MQ_KEYFILE}
+    echo "keyfile = ${MQ_KEYFILE}" >> /etc/ega/mq.conf
+fi
+
+if [ -f "${MQ_CERTFILE}" ]; then
+    if [ ! -f "${MQ_KEYFILE}" ]; then
+	echo 'You must specify the keyfile' &1>2
+	exit 2
+    fi
+    echo "certfile = ${MQ_CERTFILE}" >> /etc/ega/mq.conf
+fi
+
 
 # Changing permissions
 echo "Changing permissions for /ega/inbox"
