@@ -62,8 +62,10 @@ valid_options(void)
   if(!mq_options->exchange        ) { D3("Missing exchange");            valid = false; }
   if(!mq_options->routing_key     ) { D3("Missing routing_key");         valid = false; }
 
-  if(mq_options->verify_peer &&
-     !mq_options->cacert){ D3("Missing cacert, when using verify_peer"); valid = false; }
+  if(!!mq_options->verify_peer ^ !!mq_options->cacertfile){
+    D3("Missing cacertfile, when using verify_peer");
+    valid = false;
+  }
 
   if(!valid){ D3("Invalid configuration from %s", mq_options->cfgfile); }
 
@@ -102,7 +104,7 @@ readconfig(FILE* fp, const char* cfgfile, char* buffer, size_t buflen)
   mq_options->verify_peer = MQ_VERIFY_PEER;
   mq_options->verify_hostname = MQ_VERIFY_HOSTNAME;
   mq_options->dsn = NULL;
-  mq_options->cacert = NULL;
+  mq_options->cacertfile = NULL;
   mq_options->certfile = NULL;
   mq_options->keyfile = NULL;
   mq_options->host = NULL;
@@ -141,7 +143,7 @@ readconfig(FILE* fp, const char* cfgfile, char* buffer, size_t buflen)
     INJECT_OPTION(key, "exchange"      , val, &(mq_options->exchange)    );
     INJECT_OPTION(key, "routing_key"   , val, &(mq_options->routing_key) );
     INJECT_OPTION(key, "connection"    , val, &(mq_options->dsn)         );
-    INJECT_OPTION(key, "cacert"        , val, &(mq_options->cacert)      );
+    INJECT_OPTION(key, "cacertfile"    , val, &(mq_options->cacertfile)  );
     INJECT_OPTION(key, "certfile"      , val, &(mq_options->certfile)    );
     INJECT_OPTION(key, "keyfile"       , val, &(mq_options->keyfile)     );
 

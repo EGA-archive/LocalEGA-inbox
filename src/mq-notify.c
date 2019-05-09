@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 /* For JSON */
 #include <json-c/json.h>
@@ -98,36 +99,49 @@ static int
 mq_init_amqps(void)
 {
   D2("Initializing AMQPS socket");
+  int rc;
+
   mq_options->conn = amqp_new_connection();
   mq_options->socket = amqp_ssl_socket_new(mq_options->conn);
 
   if (!mq_options->socket) { D3("Error creating TCP/SSL socket"); return 1; }
 
-  if(mq_options->verify_peer && mq_options->cacert)
-    amqp_ssl_socket_set_cacert(mq_options->socket, mq_options->cacert);
+  if (mq_options->verify_peer && mq_options->cacertfile)
+    {
+      rc = amqp_ssl_socket_set_cacert(mq_options->socket, mq_options->cacertfile);
+      if (rc != AMQP_STATUS_OK){
+	D1("Error setting the CA certification: %s", mq_options->cacertfile);
+	return 2;
+      }
+    }
 
   amqp_ssl_socket_set_verify_peer(mq_options->socket, mq_options->verify_peer);
   amqp_ssl_socket_set_verify_hostname(mq_options->socket, mq_options->verify_hostname);
 
-  if(mq_options->cerfile && mq_options->keyfile){
+  if(mq_options->certfile && mq_options->keyfile){
     /* Checking if the keyfile is not world nor group writable */
     struct stat st;
     if (stat(mq_options->keyfile, &st) != 0){
       D1("Error accessing %s: %s", mq_options->keyfile, strerror(errno));
-      return 2;
+      return 3;
     }
     if (st.st_uid != 0 || (st.st_mode & 022) != 0){
       D1("bad ownership or modes for the keyfile %s", mq_options->keyfile);
-      return 3;
-    }
-    if ( S_ISREG(st.st_mode) ){
-      D1("Keyfile \"%s\" is not a regular file", mq_options->keyfile);
       return 4;
     }
+    if ( !S_ISREG(st.st_mode) ){
+      D1("Keyfile \"%s\" is not a regular file", mq_options->keyfile);
+      return 5;
+    }
     /* All good... */
-    amqp_ssl_socket_set_key(mq_options->socket, mq_options->certfile, mq_options->keyfile);
+    rc = amqp_ssl_socket_set_key(mq_options->socket, mq_options->certfile, mq_options->keyfile);
+    if (rc != AMQP_STATUS_OK){
+      D1("Error setting the private key: %s", mq_options->cacertfile);
+      return 6;
+    }
   }
 
+  D2("Initialization of AMQPS socket - done");
   return 0;
 }
 

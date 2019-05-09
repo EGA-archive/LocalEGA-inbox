@@ -1699,7 +1699,9 @@ main(int ac, char **av)
 	verbose("[MQ]       heartbeat: %d", mq_options->heartbeat);
 	verbose("[MQ]     ssl enabled: %s", (mq_options->ssl)?"yes":"no");
 	verbose("[MQ]     verify peer: %s", (mq_options->verify_peer)?"yes":"no");
-	verbose("[MQ]          cacert: %s", mq_options->cacert);
+	verbose("[MQ]      cacertfile: %s", mq_options->cacertfile);
+	verbose("[MQ]        certfile: %s", mq_options->certfile);
+	verbose("[MQ]         keyfile: %s", mq_options->keyfile);
 	verbose("[MQ] verify hostname: %s", (mq_options->verify_hostname)?"yes":"no");
 
 	seed_rng();

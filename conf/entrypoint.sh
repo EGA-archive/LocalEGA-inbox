@@ -6,6 +6,7 @@ set -e
 [[ -z "${CEGA_ENDPOINT}" ]] && echo 'Environment CEGA_ENDPOINT is empty' 1>&2 && exit 1
 [[ ! -z "${CEGA_USERNAME}" && ! -z "${CEGA_PASSWORD}" ]] && CEGA_ENDPOINT_CREDS="${CEGA_USERNAME}:${CEGA_PASSWORD}"
 [[ -z "${CEGA_ENDPOINT_CREDS}" ]] && echo 'Environment CEGA_ENDPOINT_CREDS is empty' 1>&2 && exit 1
+
 # Check if set
 [[ -z "${CEGA_ENDPOINT_JSON_PREFIX+x}" ]] && echo 'Environment CEGA_ENDPOINT_JSON_PREFIX must be set' 1>&2 && exit 1
 
@@ -23,6 +24,16 @@ cega_endpoint_username = ${CEGA_ENDPOINT%/}/%s?idType=username
 cega_endpoint_uid = ${CEGA_ENDPOINT%/}/%u?idType=uid
 cega_creds = ${CEGA_ENDPOINT_CREDS}
 cega_json_prefix = ${CEGA_ENDPOINT_JSON_PREFIX}
+
+verify_peer = ${VERIFY_PEER:-no}
+verify_hostname = ${VERIFY_HOSTNAME:-no}
+EOF
+
+[[ -n "${CACERTFILE}" ]] && echo "cacertfile = ${CACERTFILE}" >> /etc/ega/auth.conf
+[[ -n "${CERTFILE}" ]] && echo "certfile = ${CERTFILE}" >> /etc/ega/auth.conf
+[[ -n "${KEYFILE}" ]] && echo "keyfile = ${KEYFILE}" >> /etc/ega/auth.conf
+
+cat >> /etc/ega/auth.conf <<EOF
 
 ##################
 # NSS & PAM
@@ -62,9 +73,9 @@ routing_key = ${MQ_ROUTING_KEY:-files.inbox}
 EOF
 
 # For server verification
-if [ "${MQ_VERIFY_PEER}" == 'yes' ] && [ -f "${MQ_CACERT}" ]; then
+if [ "${MQ_VERIFY_PEER}" == 'yes' ] && [ -f "${MQ_CACERTFILE}" ]; then
     # or Yes, Y, 1, True, true...
-    echo "cacert = ${MQ_CACERT}" >> /etc/ega/mq.conf
+    echo "cacertfile = ${MQ_CACERTFILE}" >> /etc/ega/mq.conf
 fi
 
 # For client verification

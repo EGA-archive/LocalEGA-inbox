@@ -22,7 +22,7 @@ struct mq_options_s {
   int   ssl;
   int   verify_hostname;
   int   verify_peer;              /* For the SSL context */
-  char* cacert;                   /* For TLS server verification */
+  char* cacertfile;               /* For TLS server verification */
   char* certfile;                 /* For TLS client verification */
   char* keyfile;                  /* For TLS client verification */
 
