@@ -2,12 +2,11 @@ FROM centos:7.5.1804 AS BUILD
 
 #################################################
 ##
-## Upgrade CentOS 7, and install Python 3.6
+## Upgrade CentOS 7
 ##
 #################################################
 
-RUN yum -y install https://centos7.iuscommunity.org/ius-release.rpm && \
-    yum -y install epel-release && \
+RUN yum -y install epel-release && \
     yum -y update && \
     yum -y install git gcc make bzip2 \
            zlib-devel bzip2-devel unzip nss-tools \

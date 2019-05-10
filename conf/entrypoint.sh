@@ -6,6 +6,7 @@ set -e
 [[ -z "${CEGA_ENDPOINT}" ]] && echo 'Environment CEGA_ENDPOINT is empty' 1>&2 && exit 1
 [[ ! -z "${CEGA_USERNAME}" && ! -z "${CEGA_PASSWORD}" ]] && CEGA_ENDPOINT_CREDS="${CEGA_USERNAME}:${CEGA_PASSWORD}"
 [[ -z "${CEGA_ENDPOINT_CREDS}" ]] && echo 'Environment CEGA_ENDPOINT_CREDS is empty' 1>&2 && exit 1
+
 # Check if set
 [[ -z "${CEGA_ENDPOINT_JSON_PREFIX+x}" ]] && echo 'Environment CEGA_ENDPOINT_JSON_PREFIX must be set' 1>&2 && exit 1
 
@@ -23,6 +24,16 @@ cega_endpoint_username = ${CEGA_ENDPOINT%/}/%s?idType=username
 cega_endpoint_uid = ${CEGA_ENDPOINT%/}/%u?idType=uid
 cega_creds = ${CEGA_ENDPOINT_CREDS}
 cega_json_prefix = ${CEGA_ENDPOINT_JSON_PREFIX}
+
+verify_peer = ${AUTH_VERIFY_PEER:-no}
+verify_hostname = ${AUTH_VERIFY_HOSTNAME:-no}
+EOF
+
+[[ -n "${AUTH_CA}" ]] && echo "cacertfile = ${AUTH_CA}" >> /etc/ega/auth.conf
+[[ -n "${AUTH_CLIENT_CERT}" ]] && echo "certfile = ${AUTH_CLIENT_CERT}" >> /etc/ega/auth.conf
+[[ -n "${AUTH_CLIENT_KEY}" ]] && echo "keyfile = ${AUTH_CLIENT_KEY}" >> /etc/ega/auth.conf
+
+cat >> /etc/ega/auth.conf <<EOF
 
 ##################
 # NSS & PAM
@@ -47,14 +58,8 @@ cat > /etc/ega/mq.conf <<EOF
 # of the form amqp(s)://user:password@host:port/vhost
 connection = ${MQ_CONNECTION}
 
-# or per values
-#enable_ssl = ${MQ_SSL:-no}
-#host = ${MQ_HOST}
-#port = ${MQ_PORT:-5672}
-#vhost = ${MQ_VHOST}
-#username = ${MQ_USER}
-#password = ${MQ_PASSWORD}
-
+verify_peer = ${MQ_VERIFY_PEER:-no}
+verify_hostname = ${MQ_VERIFY_HOSTNAME:-no}
 
 connection_attempts = 10
 retry_delay = 10
@@ -66,6 +71,28 @@ heartbeat = 0
 exchange = ${MQ_EXCHANGE:-cega}
 routing_key = ${MQ_ROUTING_KEY:-files.inbox}
 EOF
+
+# For server verification
+if [ "${MQ_VERIFY_PEER}" == 'yes' ] && [ -f "${MQ_CA}" ]; then
+    # or Yes, Y, 1, True, true...
+    echo "cacertfile = ${MQ_CA}" >> /etc/ega/mq.conf
+fi
+
+# For client verification
+if [ -f "${MQ_CLIENT_KEY}" ]; then
+    # Keyfile must be non group nor world writable
+    chmod 600 ${MQ_CLIENT_KEY}
+    echo "keyfile = ${MQ_CLIENT_KEY}" >> /etc/ega/mq.conf
+fi
+
+if [ -f "${MQ_CLIENT_CERT}" ]; then
+    if [ ! -f "${MQ_CLIENT_KEY}" ]; then
+	echo 'You must specify the keyfile in MQ_CLIENT_KEY' &1>2
+	exit 2
+    fi
+    echo "certfile = ${MQ_CLIENT_CERT}" >> /etc/ega/mq.conf
+fi
+
 
 # Changing permissions
 echo "Changing permissions for /ega/inbox"
