@@ -25,13 +25,13 @@ cega_endpoint_uid = ${CEGA_ENDPOINT%/}/%u?idType=uid
 cega_creds = ${CEGA_ENDPOINT_CREDS}
 cega_json_prefix = ${CEGA_ENDPOINT_JSON_PREFIX}
 
-verify_peer = ${VERIFY_PEER:-no}
-verify_hostname = ${VERIFY_HOSTNAME:-no}
+verify_peer = ${AUTH_VERIFY_PEER:-no}
+verify_hostname = ${AUTH_VERIFY_HOSTNAME:-no}
 EOF
 
-[[ -n "${CACERTFILE}" ]] && echo "cacertfile = ${CACERTFILE}" >> /etc/ega/auth.conf
-[[ -n "${CERTFILE}" ]] && echo "certfile = ${CERTFILE}" >> /etc/ega/auth.conf
-[[ -n "${KEYFILE}" ]] && echo "keyfile = ${KEYFILE}" >> /etc/ega/auth.conf
+[[ -n "${AUTH_CA}" ]] && echo "cacertfile = ${AUTH_CA}" >> /etc/ega/auth.conf
+[[ -n "${AUTH_CLIENT_CERT}" ]] && echo "certfile = ${AUTH_CLIENT_CERT}" >> /etc/ega/auth.conf
+[[ -n "${AUTH_CLIENT_KEY}" ]] && echo "keyfile = ${AUTH_CLIENT_KEY}" >> /etc/ega/auth.conf
 
 cat >> /etc/ega/auth.conf <<EOF
 
@@ -73,24 +73,24 @@ routing_key = ${MQ_ROUTING_KEY:-files.inbox}
 EOF
 
 # For server verification
-if [ "${MQ_VERIFY_PEER}" == 'yes' ] && [ -f "${MQ_CACERTFILE}" ]; then
+if [ "${MQ_VERIFY_PEER}" == 'yes' ] && [ -f "${MQ_CA}" ]; then
     # or Yes, Y, 1, True, true...
-    echo "cacertfile = ${MQ_CACERTFILE}" >> /etc/ega/mq.conf
+    echo "cacertfile = ${MQ_CA}" >> /etc/ega/mq.conf
 fi
 
 # For client verification
-if [ -f "${MQ_KEYFILE}" ]; then
+if [ -f "${MQ_CLIENT_KEY}" ]; then
     # Keyfile must be non group nor world writable
-    chmod 600 ${MQ_KEYFILE}
-    echo "keyfile = ${MQ_KEYFILE}" >> /etc/ega/mq.conf
+    chmod 600 ${MQ_CLIENT_KEY}
+    echo "keyfile = ${MQ_CLIENT_KEY}" >> /etc/ega/mq.conf
 fi
 
-if [ -f "${MQ_CERTFILE}" ]; then
-    if [ ! -f "${MQ_KEYFILE}" ]; then
-	echo 'You must specify the keyfile' &1>2
+if [ -f "${MQ_CLIENT_CERT}" ]; then
+    if [ ! -f "${MQ_CLIENT_KEY}" ]; then
+	echo 'You must specify the keyfile in MQ_CLIENT_KEY' &1>2
 	exit 2
     fi
-    echo "certfile = ${MQ_CERTFILE}" >> /etc/ega/mq.conf
+    echo "certfile = ${MQ_CLIENT_CERT}" >> /etc/ega/mq.conf
 fi
 
 
