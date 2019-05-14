@@ -76,13 +76,15 @@ EOF
 if [ "${MQ_VERIFY_PEER}" == 'yes' ] && [ -f "${MQ_CA}" ]; then
     # or Yes, Y, 1, True, true...
     echo "cacertfile = ${MQ_CA}" >> /etc/ega/mq.conf
+    chown root:lega "${MQ_CA}"
 fi
 
 # For client verification
 if [ -f "${MQ_CLIENT_KEY}" ]; then
     # Keyfile must be non group nor world writable
-    chmod 600 ${MQ_CLIENT_KEY}
     echo "keyfile = ${MQ_CLIENT_KEY}" >> /etc/ega/mq.conf
+    chmod 400 "${MQ_CLIENT_KEY}"
+    chown root:lega "${MQ_CLIENT_KEY}"
 fi
 
 if [ -f "${MQ_CLIENT_CERT}" ]; then
@@ -91,6 +93,7 @@ if [ -f "${MQ_CLIENT_CERT}" ]; then
 	exit 2
     fi
     echo "certfile = ${MQ_CLIENT_CERT}" >> /etc/ega/mq.conf
+    chown root:lega "${MQ_CLIENT_CERT}"
 fi
 
 
