@@ -34,7 +34,7 @@ clean_mq_config(void)
 
   mq_clean(); /* Cleaning MQ connection */
 
-  D2("Cleaning configuration [%p]", mq_options);
+  D1("Cleaning configuration [%p]", mq_options);
   if(mq_options->buffer){ free((char*)mq_options->buffer); }
   free(mq_options);
   return;
@@ -46,31 +46,31 @@ static bool
 valid_options(void)
 {
   bool valid = true;
-  if(!mq_options) { D3("No config struct"); return false; }
+  if(!mq_options) { D1("No config struct"); return false; }
 
-  D2("Checking the config struct");
-  if(mq_options->heartbeat < 0    ) { D3("Invalid heartbeat");           valid = false; }
-  if(mq_options->port < 0         ) { D3("Invalid port");                valid = false; }
+  D1("Checking the config struct");
+  if(mq_options->heartbeat < 0    ) { D1("Invalid heartbeat");           valid = false; }
+  if(mq_options->port < 0         ) { D1("Invalid port");                valid = false; }
 
-  if(!mq_options->dsn             ) { D3("Missing dsn connection");      valid = false; }
+  if(!mq_options->dsn             ) { D1("Missing dsn connection");      valid = false; }
 
-  if(!mq_options->host            ) { D3("Missing host");                valid = false; }
-  if(!mq_options->vhost           ) { D3("Missing vhost");               valid = false; }
-  if(!mq_options->username        ) { D3("Missing username");            valid = false; }
-  if(!mq_options->password        ) { D3("Missing password");            valid = false; }
+  if(!mq_options->host            ) { D1("Missing host");                valid = false; }
+  if(!mq_options->vhost           ) { D1("Missing vhost");               valid = false; }
+  if(!mq_options->username        ) { D1("Missing username");            valid = false; }
+  if(!mq_options->password        ) { D1("Missing password");            valid = false; }
 
-  if(!mq_options->exchange        ) { D3("Missing exchange");            valid = false; }
-  if(!mq_options->routing_key     ) { D3("Missing routing_key");         valid = false; }
+  if(!mq_options->exchange        ) { D1("Missing exchange");            valid = false; }
+  if(!mq_options->routing_key     ) { D1("Missing routing_key");         valid = false; }
 
   if(!!mq_options->verify_peer ^ !!mq_options->cacertfile){
-    D3("Missing cacertfile, when using verify_peer");
+    D1("Missing cacertfile, when using verify_peer");
     valid = false;
   }
 
-  if(!valid){ D3("Invalid configuration from %s", mq_options->cfgfile); }
+  if(!valid){ D1("Invalid configuration from %s", mq_options->cfgfile); }
 
   int i;
-  D3("BUFFER ------");
+  D1("BUFFER ------");
   for (i = 0; i < mq_options->buflen; i++){
     char c = mq_options->buffer[i];
     if (c == '\0')
@@ -79,7 +79,7 @@ valid_options(void)
       fprintf(stderr, "%c", c);
   }
   fprintf(stderr, "\n");
-  D3("------");
+  D1("------");
 
 
   return valid;
@@ -92,7 +92,7 @@ valid_options(void)
 static inline int
 readconfig(FILE* fp, const char* cfgfile, char* buffer, size_t buflen)
 {
-  D3("Reading configuration file");
+  D1("Reading configuration file");
   _cleanup_str_ char* line = NULL;
   size_t len = 0;
   char *key,*eq,*val,*end;
@@ -155,20 +155,20 @@ readconfig(FILE* fp, const char* cfgfile, char* buffer, size_t buflen)
     set_yes_no_option(key, val, "verify_hostname", &(mq_options->verify_hostname));
   }
 
-  D3("Initializing MQ connection/socket early");
+  D1("Initializing MQ connection/socket early");
   
   int rc = 0;
   if( (rc = dsn_parse(&buffer, &buflen)) != 0){
-    D3("Error dsn parsing: %d", rc);
+    D1("Error dsn parsing: %d", rc);
     return rc;
   }
   if( (rc = convert_host_to_ip(&buffer, &buflen)) != 0){
-    D3("Error convert host to ip: %d", rc);
+    D1("Error convert host to ip: %d", rc);
     return rc;
   }
 
   if( (rc = mq_init()) != 0){
-    D3("Error mq_init: %d", rc);
+    D1("Error mq_init: %d", rc);
     return rc;
   }
 
@@ -179,7 +179,7 @@ bool
 load_mq_config(char* cfgfile)
 {
   D1("Loading configuration %s", cfgfile);
-  if(mq_options){ D2("Already loaded [@ %p]", mq_options); return true; }
+  if(mq_options){ D1("Already loaded [@ %p]", mq_options); return true; }
 
   _cleanup_file_ FILE* fp = NULL;
   size_t size = 100;
@@ -189,34 +189,34 @@ load_mq_config(char* cfgfile)
   
   /* read or re-read */
   fp = fopen(cfgfile, "r");
-  if (fp == NULL || errno == EACCES) { D2("Error accessing the config file: %s", strerror(errno)); return false; }
+  if (fp == NULL || errno == EACCES) { D1("Error accessing the config file: %s", strerror(errno)); return false; }
 
   mq_options = (mq_options_t*)malloc(sizeof(mq_options_t));
-  if(!mq_options){ D3("Could not allocate options data structure"); return false; };
+  if(!mq_options){ D1("Could not allocate options data structure"); return false; };
   mq_options->buffer = NULL;
   mq_options->conn = NULL;
   mq_options->socket = NULL;
 
 REALLOC:
-  D3("Allocating buffer of size %zd", size);
+  D1("Allocating buffer of size %zd", size);
   if(mq_options->buffer)free(mq_options->buffer);
   mq_options->buflen = sizeof(char) * size;
   mq_options->buffer = malloc(mq_options->buflen);
   memset(mq_options->buffer, '\0', size);
   /* *(mq_options->buffer) = '\0'; */
-  if(!mq_options->buffer){ D3("Could not allocate buffer of size %zd", size); return false; };
+  if(!mq_options->buffer){ D1("Could not allocate buffer of size %zd", size); return false; };
   
   if( readconfig(fp, cfgfile, mq_options->buffer, size) < 0 ){
 
     /* Rewind first */
-    if(fseek(fp, 0, SEEK_SET)){ D3("Could not rewind config file to start"); return false; }
+    if(fseek(fp, 0, SEEK_SET)){ D1("Could not rewind config file to start"); return false; }
 
     /* Double it */
     size = size << 1;
     goto REALLOC;
   }
 
-  D3("Conf loaded [@ %p]", mq_options);
+  D1("Conf loaded [@ %p]", mq_options);
 
 #ifdef DEBUG
   return valid_options();
@@ -229,7 +229,7 @@ REALLOC:
 static int
 convert_host_to_ip(char** buffer, size_t* buflen)
 {
-  D3("Convert hostname to IP");
+  D1("Convert hostname to IP");
   struct hostent *he;
   struct in_addr **addr_list;
   int i;
@@ -243,11 +243,11 @@ convert_host_to_ip(char** buffer, size_t* buflen)
   for(i = 0; addr_list[i] != NULL; i++) 
     {
       COPYVAL(inet_ntoa(*addr_list[i]), &(mq_options->ip), buffer, buflen);
-      D2("%s converted to %s", mq_options->host, mq_options->ip);
+      D1("%s converted to %s", mq_options->host, mq_options->ip);
       return 0;
     }
 
-  D2("Error converting to ip: %s", mq_options->host);
+  D1("Error converting to ip: %s", mq_options->host);
   return 1;
 }
 
@@ -264,7 +264,7 @@ copy2buffer(const char* data, char** dest, char **bufptr, size_t *buflen)
   size_t slen = strlen(data) + 1;
 
   if(*buflen < slen) {
-    D3("buffer too small [currently: %zd bytes left] to copy \"%s\" [%zd bytes]", *buflen, data, slen);
+    D1("buffer too small [currently: %zd bytes left] to copy \"%s\" [%zd bytes]", *buflen, data, slen);
     return -slen;
   }
 
@@ -287,7 +287,7 @@ set_yes_no_option(char* key, char* val, char* name, int* loc)
     } else if(!strcasecmp(val, "no") || !strcasecmp(val, "false") || !strcmp(val, "0") || !strcasecmp(val, "off")){
       *loc = 0;
     } else {
-      D2("Could not parse the %s option: Using %s instead.", name, ((*loc)?"yes":"no"));
+      D1("Could not parse the %s option: Using %s instead.", name, ((*loc)?"yes":"no"));
     }
   }
 }
@@ -295,7 +295,7 @@ set_yes_no_option(char* key, char* val, char* name, int* loc)
 static int
 dsn_parse(char** buffer, size_t* buflen)
 {
-  D3("Parsing DSN");
+  D1("Parsing DSN");
   if(!mq_options->dsn) return 2;
 
   struct amqp_connection_info ci;
