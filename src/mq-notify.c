@@ -53,30 +53,30 @@ mq_clean(void)
 {
   if(!mq_options->conn) return 0; /* Not initialized */
 
-  D2("Cleaning connection to message broker");
+  D1("Cleaning connection to message broker");
   amqp_rpc_reply_t amqp_ret;
   int rc;
 
   amqp_ret = amqp_channel_close(mq_options->conn, 1, AMQP_REPLY_SUCCESS);
   if (amqp_ret.reply_type != AMQP_RESPONSE_NORMAL) {
-    D2("Error: Closing channel");
+    D1("Error: Closing channel");
     return 1;
   }
 
   amqp_ret = amqp_connection_close(mq_options->conn, AMQP_REPLY_SUCCESS);
   if (amqp_ret.reply_type != AMQP_RESPONSE_NORMAL) {
-    D2("Error: Closing connection");
+    D1("Error: Closing connection");
     return 2;
   }
 
   /* check if ssl */
   if (mq_options->ssl && (rc = amqp_uninitialize_ssl_library()) < 0) {
-    D2("Error: Uninitializing SSL library");
+    D1("Error: Uninitializing SSL library");
     return 3;
   }
 
   if ((rc = amqp_destroy_connection(mq_options->conn)) < 0) {
-    D2("Error: Ending connection");
+    D1("Error: Ending connection");
     return 4;
   }
 
@@ -88,23 +88,23 @@ mq_clean(void)
 static int
 mq_init_amqp(void)
 {
-  D2("Initializing AMQP socket");
+  D1("Initializing AMQP socket");
   mq_options->conn = amqp_new_connection();
   mq_options->socket = amqp_tcp_socket_new(mq_options->conn);
-  if (!mq_options->socket) { D3("Error creating TCP socket"); return 1; }
+  if (!mq_options->socket) { D1("Error creating TCP socket"); return 1; }
   return 0;
 }
 
 static int
 mq_init_amqps(void)
 {
-  D2("Initializing AMQPS socket");
+  D1("Initializing AMQPS socket");
   int rc;
 
   mq_options->conn = amqp_new_connection();
   mq_options->socket = amqp_ssl_socket_new(mq_options->conn);
 
-  if (!mq_options->socket) { D3("Error creating TCP/SSL socket"); return 1; }
+  if (!mq_options->socket) { D1("Error creating TCP/SSL socket"); return 1; }
 
   if (mq_options->verify_peer && mq_options->cacertfile)
     {
@@ -141,14 +141,14 @@ mq_init_amqps(void)
     }
   }
 
-  D2("Initialization of AMQPS socket - done");
+  D1("Initialization of AMQPS socket - done");
   return 0;
 }
 
 static int
 mq_open_connection(void)
 {
-  D2("Connecting to message broker");
+  D1("Connecting to message broker");
   int rc;
 
   if(!mq_options->socket || !mq_options->ip)
@@ -175,14 +175,14 @@ mq_open_connection(void)
 	       mq_options->password);
 
   if (amqp_ret.reply_type != AMQP_RESPONSE_NORMAL) {
-    D2("Error: Logging in");
+    D1("Error: Logging in");
     return 3;
   }
 
   amqp_channel_open(mq_options->conn, 1);
   amqp_ret = amqp_get_rpc_reply(mq_options->conn);
   if (amqp_ret.reply_type != AMQP_RESPONSE_NORMAL) {
-    D2("Error opening channel");
+    D1("Error opening channel");
     return 4;
   }
 
@@ -203,7 +203,7 @@ mq_open_connection(void)
 int
 mq_send_upload(const char* username, const char* filepath, const char* hexdigest, const off_t filesize, const time_t modified)
 { 
-  D2("%s uploaded %s", username, filepath);
+  D1("%s uploaded %s", username, filepath);
   _cleanup_str_ char* msg = NULL;
 
   if(!mq_options->connection_opened /* Not yet logged in */
@@ -211,23 +211,23 @@ mq_send_upload(const char* username, const char* filepath, const char* hexdigest
     return 1;
 
   msg = build_message(MQ_OP_UPLOAD, username, filepath, hexdigest, filesize, modified, NULL);
-  D3("sending '%s' to %s", msg, mq_options->host);
+  D1("sending '%s' to %s", msg, mq_options->host);
 
   if(do_send_message(msg) == AMQP_STATUS_OK){
-    D2("Message sent to amqp%s://%s:%d/%s", ((mq_options->ssl)?"s":""),
+    D1("Message sent to amqp%s://%s:%d/%s", ((mq_options->ssl)?"s":""),
                                             mq_options->host,
                                             mq_options->port,
 	                                    mq_options->vhost);
     return 0;
   }
-  D2("Unable to send message");
+  D1("Unable to send message");
   return 2;
 }
 
 int
 mq_send_remove(const char* username, const char* filepath)
 { 
-  D2("%s removed %s", username, filepath);
+  D1("%s removed %s", username, filepath);
   _cleanup_str_ char* msg = NULL;
 
   if(!mq_options->connection_opened /* Not yet logged in */
@@ -235,23 +235,23 @@ mq_send_remove(const char* username, const char* filepath)
     return 1;
 
   msg = build_message(MQ_OP_REMOVE, username, filepath, NULL, 0, 0, NULL);
-  D3("sending '%s' to %s", msg, mq_options->host);
+  D1("sending '%s' to %s", msg, mq_options->host);
 
   if(do_send_message(msg) == AMQP_STATUS_OK){
-    D2("Message sent to amqp%s://%s:%d/%s", ((mq_options->ssl)?"s":""),
+    D1("Message sent to amqp%s://%s:%d/%s", ((mq_options->ssl)?"s":""),
                                             mq_options->host,
                                             mq_options->port,
 	                                    mq_options->vhost);
     return 0;
   }
-  D2("Unable to send message");
+  D1("Unable to send message");
   return 2;
 }
 
 int
 mq_send_rename(const char* username, const char* oldpath, const char* newpath)
 { 
-  D2("%s renamed %s into %s", username, oldpath, newpath);
+  D1("%s renamed %s into %s", username, oldpath, newpath);
   _cleanup_str_ char* msg = NULL;
 
   if(!mq_options->connection_opened /* Not yet logged in */
@@ -259,16 +259,16 @@ mq_send_rename(const char* username, const char* oldpath, const char* newpath)
     return 1;
   
   msg = build_message(MQ_OP_RENAME, username, newpath, NULL, 0, 0, oldpath);
-  D3("sending '%s' to %s", msg, mq_options->host);
+  D1("sending '%s' to %s", msg, mq_options->host);
 
   if(do_send_message(msg) == AMQP_STATUS_OK){
-    D2("Message sent to amqp%s://%s:%d/%s", ((mq_options->ssl)?"s":""),
+    D1("Message sent to amqp%s://%s:%d/%s", ((mq_options->ssl)?"s":""),
                                             mq_options->host,
                                             mq_options->port,
 	                                    mq_options->vhost);
     return 0;
   }
-  D2("Unable to send message");
+  D1("Unable to send message");
   return 2;
 }
 
@@ -363,7 +363,7 @@ do_send_message(const char* message)
   uuid_t uu;
   uuid_generate(uu);
   uuid_unparse(uu, correlation_id);
-  D3("Correlation ID: %s", correlation_id);
+  D1("Correlation ID: %s", correlation_id);
   props.correlation_id = amqp_cstring_bytes(correlation_id);
 
   return amqp_basic_publish(mq_options->conn,
