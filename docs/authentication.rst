@@ -6,11 +6,9 @@ Inbox login system
 Central EGA contains a database of users with credentials (per
 LocalEGA instance).
 
-The authentication is either via a password or an RSA key against
-CentralEGA database itself.
-
-The solution uses CentralEGA's user IDs but can also be extended to
-use Elixir IDs (of which we strip the ``@elixir-europe.org`` suffix).
+The authentication is either via a password or an SSH key against
+CentralEGA's database. User IDs can also be extended to use Elixir
+IDs, of which we strip the ``@elixir-europe.org`` suffix.
 
 The procedure is as follows: the inbox is started without any created
 user. When a user wants to log into the inbox (actually, only ``sftp``
