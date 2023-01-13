@@ -2,6 +2,8 @@ SHELL := /bin/bash
 COMMIT ?= $(shell git rev-parse HEAD)
 ARGS = 
 
+IMG=crg/fega-inbox:$(COMMIT)
+
 .PHONY: build latest
 
 all: latest
@@ -12,5 +14,6 @@ build latest:
 	       --build-arg COMMIT=$(COMMIT) \
                --build-arg BUILD_DATE="$(shell date +%Y-%m-%d_%H.%M.%S)" \
                --build-arg LEGA_GID=$(shell id -g lega) \
-	       -t crg/fega-test:$(COMMIT) .
-	docker tag crg/fega-test:$(COMMIT) crg/fega-test:$@
+	       -t $(IMG) .
+	docker tag $(IMG) crg/fega-inbox:$@
+
