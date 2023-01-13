@@ -7,9 +7,6 @@ set -e
 [[ ! -z "${CEGA_USERNAME}" && ! -z "${CEGA_PASSWORD}" ]] && CEGA_ENDPOINT_CREDS="${CEGA_USERNAME}:${CEGA_PASSWORD}"
 [[ -z "${CEGA_ENDPOINT_CREDS}" ]] && echo 'Environment CEGA_ENDPOINT_CREDS is empty' 1>&2 && exit 1
 
-# Check if set
-[[ -z "${CEGA_ENDPOINT_JSON_PREFIX+x}" ]] && echo 'Environment CEGA_ENDPOINT_JSON_PREFIX must be set' 1>&2 && exit 1
-
 # Broker connection settings
 [[ -z "${MQ_CONNECTION}" ]] && echo 'Environment MQ_CONNECTION is empty' 1>&2 && exit 1
 
@@ -19,11 +16,9 @@ cat > /etc/ega/auth.conf <<EOF
 ##################
 # Central EGA
 ##################
-
-cega_endpoint_username = ${CEGA_ENDPOINT%/}/%s?idType=username
-cega_endpoint_uid = ${CEGA_ENDPOINT%/}/%u?idType=uid
+cega_endpoint_username = ${CEGA_ENDPOINT%/}/username/%s
+cega_endpoint_uid = ${CEGA_ENDPOINT%/}/user-id/%u
 cega_creds = ${CEGA_ENDPOINT_CREDS}
-cega_json_prefix = ${CEGA_ENDPOINT_JSON_PREFIX}
 
 verify_peer = ${AUTH_VERIFY_PEER:-no}
 verify_hostname = ${AUTH_VERIFY_HOSTNAME:-no}
@@ -38,16 +33,21 @@ cat >> /etc/ega/auth.conf <<EOF
 ##################
 # NSS & PAM
 ##################
-#prompt = Knock Knock:
-#ega_shell = /bin/bash
-#ega_uid_shift = 10000
+#shell = /bin/bash
+#uid_shift = 10000
 
-ega_gid = ${EGA_GID}
-chroot_sessions = yes
+gid = ${EGA_GID}
+homedir_prefix = /ega/inbox
+
+shadow_min = 0
+shadow_max = 99999
+shadow_warn = 7
+
+##########################################
+# Cache settings
+##########################################
 db_path = /run/ega.db
-ega_dir = /ega/inbox
-ega_dir_attrs = 2750 # rwxr-s---
-#ega_dir_umask = 027 # world-denied
+
 EOF
 
 cat > /etc/ega/mq.conf <<EOF

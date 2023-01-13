@@ -46,15 +46,56 @@ eg:
    cega_endpoint_username = http://cega_users/user/
    cega_endpoint_uid = http://cega_users/id/
    cega_creds = user:password
-   
-   # Selects where the JSON object is rooted
-   # Use a dotted format à la JQ, eg level1.level2.level3
-   # Default: empty
-   cega_json_prefix = 
-   
+      
    ##########################################
-   # Local database settings (for NSS & PAM)
+   # NSS settings
    ##########################################
+
+   # Per site configuration, to shift the users id range
+   # Default: 10000
+   #uid_shift = 1000
+
+   # The group to which all users belong.
+   # For the moment, only that one.
+   # Required setting. No default.
+   gid = 997
+
+   # Per site configuration, where the home directories are located
+   # The user's name will be appended.
+   # Required setting. No default.
+   homedir_prefix = /ega/inbox
+
+   # The user's login shell.
+   # Default: /bin/bash
+   #shell = /bin/aspshell-r
+
+   # days until change allowed
+   # Default: 0
+   shadow_min = 0
+
+   # days before change required
+   # Default: 0
+   shadow_max = 99999
+
+   # days warning for expiration
+   # Default: -1
+   shadow_warn = 7
+
+   # days before account inactive
+   # Default: -1
+   # shadow_inact = 7
+
+   # date when account expires
+   # Default: -1
+   # shadow_expire = 7
+
+   ##########################################
+   # Cache settings
+   ##########################################
+
+   # Use the SQLite cache
+   # Default: yes
+   #use_cache = no
 
    # Absolute path to the SQLite database.
    # Required setting. No default value.
@@ -63,39 +104,6 @@ eg:
    # Sets how long a cache entry is valid, in seconds.
    # Default: 3600 (ie 1h).
    # cache_ttl = 86400
-   
-   # Per site configuration, to shift the users id range
-   # Default: 10000
-   #ega_uid_shift = 1000
-   
-   # The group to which all users belong.
-   # For the moment, only only.
-   # Required setting. No default.
-   ega_gid = 997
-   
-   # This causes the PAM sessions to be chrooted into the user's home directory.
-   # Useful for SFTP connections, but complicated for regular ssh
-   # connections (since no proper environment exists there).
-   # Default: false
-   chroot_sessions = yes
-   
-   # Per site configuration, where the home directories are located
-   # The user's name will be appended.
-   # Required setting. No default.
-   ega_dir = /ega/inbox
-   ega_dir_attrs = 2750 # rwxr-s---
-   
-   # sets the umask for each session (in octal format)
-   # Default: 027 # world-denied
-   #ega_dir_umask = 027
-   
-   # When the password is asked
-   # Default: "Please, enter your EGA password: "
-   #prompt = Knock Knock:
-   
-   # The user's login shell.
-   # Default: /bin/bash
-   #ega_shell = /bin/aspshell-r
 
 
 .. note:: After proper configuration, there is no user maintenance, it is
@@ -137,12 +145,10 @@ part of the C library).
 Updating a user password is not allowed (ie therefore the ``password``
 *type* is configured to deny every access).
 
-The ``session`` *type* handles the chrooting.
+The ``session`` *type* eventually handles the chrooting, but it is
+better to leave it to OpenSSH. So the pam module is commented in the
+configuration file.
 
-The ``account`` *type* of the PAM module is a pass-through. It
-succeeds. It also "refreshes" the cache information is case it has
-expired. This cache expiration mechanism will capture the situation
-where the user's credentials have been reset. If the user stays logged
-in and idle, the ssh session will expire. If the user is not idle,
-then it is the same behaviour as if the user account was created
-locally (ie. in /etc/passwd and /etc/shadow).
+The ``account`` *type* of the PAM module ensures the user's home
+directory is created. If it already is created, it's a pass-through
+that always succeeds.
