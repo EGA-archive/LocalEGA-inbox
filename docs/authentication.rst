@@ -145,9 +145,11 @@ part of the C library).
 Updating a user password is not allowed (ie therefore the ``password``
 *type* is configured to deny every access).
 
-The ``session`` *type* eventually handles the chrooting, but it is
-better to leave it to OpenSSH. So the pam module is commented in the
-configuration file.
+The ``session`` *type* handles the chrooting and the umask of the
+running process (here the [internal
+sftp-server](https://github.com/EGA-archive/LocalEGA-inbox/blob/master/conf/sshd_config#L27)). OpenSSH
+can also handle that but it imposes more (arguably valuable)
+restrictions.
 
 The ``account`` *type* of the PAM module ensures the user's home
 directory is created. If it already is created, it's a pass-through

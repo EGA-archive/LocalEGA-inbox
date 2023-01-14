@@ -2,9 +2,4 @@
 auth       requisite    /lib/security/pam_ega_auth.so
 account    requisite    /lib/security/pam_ega_acct.so attrs=0700 bail_on_exists
 password   required     pam_deny.so
-
-session	required	pam_permit.so
-session optional	pam_umask.so
-session	required	pam_unix.so 
-
-#session    requisite    /lib/security/pam_ega_session.so umask=0007
+session    requisite    /lib/security/pam_ega_session.so umask=0007
