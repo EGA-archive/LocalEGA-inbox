@@ -146,8 +146,8 @@ Updating a user password is not allowed (ie therefore the ``password``
 *type* is configured to deny every access).
 
 The ``session`` *type* handles the chrooting and the umask of the
-running process (here the [internal
-sftp-server](https://github.com/EGA-archive/LocalEGA-inbox/blob/master/conf/sshd_config#L27)). OpenSSH
+running process (here the `internal sftp-server
+<https://github.com/EGA-archive/LocalEGA-inbox/blob/master/conf/sshd_config#L27>`_. OpenSSH
 can also handle that but it imposes more (arguably valuable)
 restrictions.
 
