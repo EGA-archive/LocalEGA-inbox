@@ -1,0 +1,7 @@
+[submodule "openssh"]
+	path = src/openssh
+	url = https://github.com/openssh/openssh-portable.git
+	branch = V_9_5
+[submodule "ega-auth"]
+	path = src/auth
+	url = git@github.com:EGA-archive/EGA-auth.git

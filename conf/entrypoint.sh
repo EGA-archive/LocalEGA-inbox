@@ -10,7 +10,7 @@ set -e
 # Broker connection settings
 [[ -z "${MQ_CONNECTION}" ]] && echo 'Environment MQ_CONNECTION is empty' 1>&2 && exit 1
 
-EGA_GID=$(getent group lega | awk -F: '{ print $3 }')
+LEGA_GID=$(getent group lega | awk -F: '{ print $3 }')
 
 cat > /etc/ega/auth.conf <<EOF
 ##################
@@ -36,7 +36,7 @@ cat >> /etc/ega/auth.conf <<EOF
 #shell = /bin/bash
 #uid_shift = 10000
 
-gid = ${EGA_GID}
+gid = ${LEGA_GID}
 homedir_prefix = /ega/inbox
 
 shadow_min = 0
@@ -114,4 +114,4 @@ rm -f /etc/{ega,ssh}/ssh_host_{rsa,dsa,ed25519}_key
 
 echo "Starting the SFTP server"
 # Use -o LogLevel=VERBOSE to see the MQ connection parameters
-exec /opt/openssh/sbin/ega-sshd -D -e -f /etc/ega/sshd_config -Z /etc/ega/mq.conf
+exec /opt/openssh/sbin/sshd -D -e -f /etc/ega/sshd_config -Z /etc/ega/mq.conf
