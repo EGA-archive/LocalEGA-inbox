@@ -11,7 +11,7 @@ allow root, nor ssh).
 We disable X11 forwarding, tunneling and other forms of relay. We
 allow password and public key authentication.
 
-The configuration file is in ``/etc/ega/sshd_confif`` as:
+The configuration file is in ``/etc/ega/sshd_config`` as:
 
 .. code::
 

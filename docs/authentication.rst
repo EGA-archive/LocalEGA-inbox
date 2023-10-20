@@ -43,8 +43,8 @@ eg:
    ##########################################
    
    # The username will be appended to the endpoints
-   cega_endpoint_username = http://cega_users/user/
-   cega_endpoint_uid = http://cega_users/id/
+   cega_endpoint_username = http://cega_users/username/%s
+   cega_endpoint_uid = http://cega_users/user-id/%u
    cega_creds = user:password
       
    ##########################################

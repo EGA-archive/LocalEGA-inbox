@@ -1,5 +1,5 @@
-Logging
-=======
+Logging & Debugging
+===================
 
 We leverage the logging capabilites of OpenSSH. It can use ``syslog``,
 and since we (might) run the ``sftp-server`` in a chroot environment,

@@ -2,8 +2,8 @@
 Local EGA Inbox
 ================
 
-We use the OpenSSH SFTP server (version 7.8p5), on a Linux
-distribution (currently CentOS7).
+We use the OpenSSH SFTP server (version 9.5), on a Linux
+distribution (currently Debian 12).
 
 Authentication is performed by the Operating System, using the classic
 plugable mechanism (PAM), and username resolution module (called NSS).
@@ -19,10 +19,10 @@ local message broker`_. In the case of a file upload, the notification
 also contains extra file information, such as a SHA256 checksum, its
 size and a timestamp for when it was last modified.
 
-We created the SSH deamon ``/opt/openssh/sbin/ega-sshd`` binary and
-`configured the *ega-sshd* service to use PAM <authentication.html>`_.
+We created the SSH deamon ``/opt/openssh/sbin/sshd`` binary and
+`configured the *ega* service to use PAM <authentication.html>`_.
 
-The *ega-sshd* service is configured using the ``-c`` switch to
+The *ega* service is configured using the ``-c`` switch to
 specify where the configuration file is. The service runs for the
 moment on port 9000.
 
@@ -41,7 +41,7 @@ disallow ssh connections on that port.
    Configuration        <settings>
    Authentication       <authentication>
    Notifications        <notifications>
-   Logging              <logging>
+   Logging/Debugging    <logging>
 
 | Version |version| | Generated |today|
 
