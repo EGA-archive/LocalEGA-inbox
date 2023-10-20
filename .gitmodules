@@ -4,4 +4,4 @@
 	branch = V_9_5
 [submodule "ega-auth"]
 	path = src/auth
-	url = git@github.com:EGA-archive/EGA-auth.git
+	url = https://github.com/EGA-archive/EGA-auth.git
