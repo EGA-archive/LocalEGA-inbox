@@ -21,8 +21,6 @@ ifeq ($(LEGA_GID),)
 endif
 	docker build $(ARGS) \
 	       --build-arg ARCH=$(ARCH) \
-	       --build-arg COMMIT=$(COMMIT) \
-               --build-arg BUILD_DATE="$(shell date +%Y-%m-%d_%H.%M.%S)" \
                --build-arg LEGA_GID=$(LEGA_GID) \
 	       -t $(IMG) .
 	docker tag $(IMG) crg/fega-inbox:$@
