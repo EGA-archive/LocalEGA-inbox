@@ -21,6 +21,23 @@ ifeq ($(LEGA_GID),)
 endif
 	docker build $(ARGS) \
 	       --build-arg ARCH=$(ARCH) \
+               --build-arg LEGA_UID=$(LEGA_UID) \
                --build-arg LEGA_GID=$(LEGA_GID) \
 	       -t $(IMG) .
 	docker tag $(IMG) crg/fega-inbox:$@
+
+
+up:
+	docker run -d --rm --name inbox-test \
+	-v $(shell pwd)/conf/mq:/etc/rabbitmq \
+	-p 15675:15672 \
+	--entrypoint /bin/sleep crg/fega-inbox:latest 365d
+
+run:
+	docker run -d --rm --name inbox-test --entrypoint /bin/sleep crg/fega-inbox:build 365d
+
+exec:
+	docker exec -it --user root inbox-test bash
+
+down:
+	-docker stop inbox-test

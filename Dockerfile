@@ -1,27 +1,53 @@
-FROM debian:12-slim AS BUILD
+FROM debian:13-slim AS build
 
 RUN apt-get update && \
 #    apt-get upgrade && \
     apt-get install -y --no-install-recommends \
             vim ca-certificates pkg-config git gcc cmake make automake autoconf libtool patch \
             bzip2 zlib1g-dev libssl-dev libedit-dev libcurl4-openssl-dev procps \
-            libjson-c-dev libsqlite3-dev libpam0g-dev uuid-dev libreadline-dev librabbitmq-dev
+            libjson-c-dev libsqlite3-dev libpam0g-dev uuid-dev libreadline-dev librabbitmq-dev \
+            gosu
 
-RUN groupadd -g 75 -r ega-sshd && \
-    mkdir -p /var/empty/sshd && \
-    chmod 700 /var/empty/sshd && \
+# gosu working?
+RUN gosu nobody true
+
+ARG LEGA_GID=1000
+
+RUN \
+<<EOFPWD cat > /etc/passwd && \
+<<EOFGRP cat > /etc/group && \
+<<EOFSHADOW cat > /etc/shadow
+root:x:0:0:root:/root:/bin/bash
+_apt:x:42:65534::/nonexistent:/usr/sbin/nologin
+ega-sshd:x:75:$((LEGA_GID + 1)):"Privilege-separated SSH":/var/empty/sshd:/usr/sbin/nologin
+rabbitmq:x:999:$((LEGA_GID + 2)):"RabbitMQ":/var/lib/rabbitmq:/usr/sbin/nologin
+EOFPWD
+root:x:0:
+shadow:x:1:
+lega:x:${LEGA_GID}:
+ega-sshd:x:$((LEGA_GID + 1)):ega-sshd
+rabbitmq:x:$((LEGA_GID + 2)):rabbitmq
+EOFGRP
+root:*:19702:0:99999:7:::
+_apt:*:20564:0:99999:7:::
+ega-sshd:*:19702:0:99999:7:::
+rabbitmq:!:19702:0:99999:7:::
+EOFSHADOW
+
+RUN chgrp shadow /etc/shadow && \
+    chmod 640    /etc/shadow && \
 # /var/empty/sshd must be owned by root and not group or world-writable.
-    useradd -c "Privilege-separated SSH" \
-            -u 75 \
-            -g ega-sshd \
-            -s /usr/sbin/nologin \
-            -r \
-            -d /var/empty/sshd ega-sshd
+    mkdir -p /var/empty/sshd && \
+    chmod 700 /var/empty/sshd
 
-COPY src /var/src
+COPY src/openssh /var/src/openssh
+COPY src/patches /var/src/patches
+
+######### OpenSSH
 WORKDIR /var/src/openssh
 
-# Patching the sftp-server.c/sshd.c
+# Patching the sftp-server.c
+RUN cp ../patches/fega-mq.c .
 RUN patch -p1 < ../patches/lega.patch
 
 # (re)Build OpenSSH
@@ -37,35 +63,33 @@ RUN autoreconf && \
  	        --without-maildir \
 		--without-selinux \
 		--without-systemd \
-		--with-pid-dir=/run && \
-     make && \
+		--with-pid-dir=/run
+
+RUN  make && \
 # rsa, dsa and ed25519 keys are created in the entrypoint
      make install-nosysconf
 
 # Install EGA PAM
-WORKDIR /var/src/auth/src
+COPY src/auth/src /var/src/auth
+WORKDIR /var/src/auth
 RUN mkdir -p /usr/local/lib/ega && \
-    make install clean
+    make NSS_CFGFILE='/etc/ega/auth.conf' && \
+    make install
 
-#################################################
-## DEV running
-#################################################
+COPY conf/entrypoint.sh /usr/local/bin/entrypoint.sh
 
-COPY conf/sshd_config /etc/ega/sshd_config
-COPY conf/pam.ega /etc/pam.d/ega
-
-ARG LEGA_GID=1000
-RUN groupadd -r -g ${LEGA_GID} lega # will fail on purpose if the user passed an existing group inside the container
-RUN echo '/usr/local/lib' >> /etc/ld.so.conf.d/ega.conf && \
+RUN mkdir /etc/ega && \
+    chmod 755 /usr/local/bin/entrypoint.sh && \
+    echo '/usr/local/lib' >> /etc/ld.so.conf.d/ega.conf && \
     echo '/usr/local/lib/ega' >> /etc/ld.so.conf.d/ega.conf && \
     sed -i -e 's/^passwd:\(.*\)files/passwd:\1files ega/' /etc/nsswitch.conf && \
     sed -i -e 's/^shadow:\(.*\)files/shadow:\1files ega/' /etc/nsswitch.conf && \
     ldconfig -v
 
-COPY conf/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod 755 /usr/local/bin/entrypoint.sh
-
-ENTRYPOINT ["entrypoint.sh"]
+#################################################
+## RabbitMQ
+#################################################
+FROM rabbitmq:4.2.6 AS rabbitmq
 
 #################################################
 ##
@@ -73,55 +97,77 @@ ENTRYPOINT ["entrypoint.sh"]
 ##
 #################################################
 
-FROM debian:12-slim
+FROM debian:13-slim
 
-LABEL maintainer "EGA System Developers"
+LABEL maintainer="EGA System Developers"
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.vcs-url="https://github.com/EGA-archive/LocalEGA-inbox"
 
 EXPOSE 9000
+EXPOSE 15672
+EXPOSE 5672
 VOLUME /ega/inbox
 
-# Before the EGA PAM lib is loaded
-ARG LEGA_GID=1000
+# Use the latest stable RabbitMQ release (https://www.rabbitmq.com/download.html)
+ENV RABBITMQ_VERSION=4.2.6
+# https://www.rabbitmq.com/signatures.html#importing-gpg
+ENV RABBITMQ_HOME=/opt/rabbitmq
+# Add RabbitMQ+Erlang to PATH
+ENV PATH=$RABBITMQ_HOME/sbin:/opt/erlang/bin:$PATH
 
-RUN groupadd -g 75 -r ega-sshd && \
-    mkdir -p /var/empty/sshd && \
-    chmod 700 /var/empty/sshd && \
-# /var/empty/sshd must be owned by root and not group or world-writable.
-    useradd -c "Privilege-separated SSH" \
-            -u 75 \
-            -g ega-sshd \
-            -s /usr/sbin/nologin \
-            -r \
-            -d /var/empty/sshd ega-sshd && \
-    groupadd -r -g ${LEGA_GID} lega # will fail on purpose if the user passed an existing group inside the container
+ENV LANG=C.UTF-8 LANGUAGE=C.UTF-8 LC_ALL=C.UTF-8
 
-ARG ARCH=x86_64    
+# the rabbitmq-server startup script uses RUNNING_UNDER_SYSTEMD to determine if the erl command
+# should be started via exec, which results in beam.smp becoming PID 1 in the container
+ENV RUNNING_UNDER_SYSTEMD=true
 
-COPY --from=BUILD /opt/openssh /opt/openssh
-COPY --from=BUILD /usr/local/bin /usr/local/bin
-COPY --from=BUILD /usr/local/lib /usr/local/lib
-COPY --from=BUILD /usr/lib/$ARCH-linux-gnu/ /usr/lib/$ARCH-linux-gnu/
+COPY --from=build /etc/passwd /etc/passwd
+COPY --from=build /etc/shadow /etc/shadow
+COPY --from=build /etc/group /etc/group
 
-#COPY --from=BUILD /lib/security/pam_ega_* /lib/security/
-COPY --from=BUILD /lib/security/pam_ega_auth.so /lib/security/pam_ega_auth.so
-COPY --from=BUILD /lib/security/pam_ega_acct.so /lib/security/pam_ega_acct.so
-COPY --from=BUILD /lib/security/pam_ega_session.so /lib/security/pam_ega_session.so
+# RabbitMQ files
+COPY --from=rabbitmq /opt/erlang /opt/erlang
+COPY --from=rabbitmq /opt/openssl /opt/openssl
+COPY --from=rabbitmq /opt/rabbitmq /opt/rabbitmq
+COPY --from=rabbitmq --chown=rabbitmq:rabbitmq /etc/rabbitmq /etc/rabbitmq
+COPY --from=rabbitmq --chown=rabbitmq:rabbitmq /var/lib/rabbitmq /var/lib/rabbitmq
+COPY --from=rabbitmq --chown=rabbitmq:rabbitmq /var/log/rabbitmq /var/log/rabbitmq
+COPY --from=rabbitmq --chown=rabbitmq:rabbitmq /tmp/rabbitmq-ssl /tmp/rabbitmq-ssl
 
+ARG ARCH=x86_64
 
-COPY conf/sshd_config /etc/ega/sshd_config
-COPY conf/pam.ega /etc/pam.d/ega
-COPY conf/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY --from=build /opt/openssh /opt/openssh
+COPY --from=build /usr/local/bin /usr/local/bin
+COPY --from=build /usr/local/lib /usr/local/lib
+COPY --from=build /usr/lib/$ARCH-linux-gnu/ /usr/lib/$ARCH-linux-gnu/
+
+#COPY --from=build /lib/security/pam_ega_* /lib/security/
+COPY --from=build /lib/security/pam_ega_auth.so /lib/security/pam_ega_auth.so
+COPY --from=build /lib/security/pam_ega_acct.so /lib/security/pam_ega_acct.so
+COPY --from=build /lib/security/pam_ega_session.so /lib/security/pam_ega_session.so
+
+COPY --from=build /usr/sbin/gosu /usr/sbin/gosu
 
 RUN chmod 755 /usr/local/bin/entrypoint.sh && \
     echo '/usr/local/lib' >> /etc/ld.so.conf.d/ega.conf && \
     echo '/usr/local/lib/ega' >> /etc/ld.so.conf.d/ega.conf && \
     sed -i -e 's/^passwd:\(.*\)files/passwd:\1files ega/' /etc/nsswitch.conf && \
     sed -i -e 's/^shadow:\(.*\)files/shadow:\1files ega/' /etc/nsswitch.conf && \
-    ldconfig -v
+    ldconfig -v && \
+    mkdir -p /etc/ega        && \
+# /var/empty/sshd must be owned by root and not group or world-writable.
+    mkdir -p /var/empty/sshd && \
+    chmod 700 /var/empty/sshd && \
+# make sure the metrics collector is re-enabled
+    rm -f /etc/rabbitmq/conf.d/20-management_agent.disable_metrics_collector.conf
 
-ENTRYPOINT ["entrypoint.sh"]
+COPY conf/sshd_config /etc/ega/sshd_config
+COPY conf/pam.ega /etc/pam.d/ega
+COPY conf/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY --chown=rabbitmq:rabbitmq conf/mq /etc/rabbitmq
+COPY conf/banner /etc/ega/banner
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 ARG COMMIT
 ARG BUILD_DATE
