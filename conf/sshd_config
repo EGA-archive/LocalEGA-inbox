@@ -3,7 +3,6 @@ Port 9000
 Protocol 2
 Banner  /etc/ega/banner
 HostKey /etc/ega/ssh_host_rsa_key
-HostKey /etc/ega/ssh_host_dsa_key
 HostKey /etc/ega/ssh_host_ed25519_key
 # Authentication
 UsePAM yes
